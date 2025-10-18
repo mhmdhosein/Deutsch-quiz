@@ -1,0 +1,409 @@
+// متغیرهای عمومی
+let allQuestions = []; // کل بانک سوالات
+let examQuestions = []; // سوالات انتخاب شده برای آزمون
+let userAnswers = {}; // پاسخ‌های کاربر {questionId: 'A' | 'B' | 'C' | 'D' | null}
+let currentQuestionIndex = 0;
+let totalTimeSeconds = 0;
+let timeRemaining = 0;
+let timerInterval = null;
+let lastViewedQuestionIndex = 0; // برای بازگشت از مودال
+
+// انتخاب‌گرهای DOM
+const $ = selector => document.querySelector(selector);
+const $$ = selector => document.querySelectorAll(selector);
+
+// المان‌های صفحه
+const screens = $$('.screen');
+const homeScreen = $('#home-screen');
+const examScreen = $('#exam-screen');
+const resultScreen = $('#result-screen');
+const startExamBtn = $('#start-exam-btn');
+const finishExamBtn = $('#finish-exam-btn');
+const retakeExamBtn = $('#retake-exam-btn');
+const prevQuestionBtn = $('#prev-question-btn');
+const nextQuestionBtn = $('#next-question-btn');
+const answerSheetBtn = $('#answer-sheet-btn');
+const answerSheetModal = $('#answer-sheet-modal');
+const closeModalBtn = $('#close-modal-btn');
+const optionsContainer = $('#options-container');
+
+// ------------------- Utility Functions -------------------
+
+/** نمایش صفحه مورد نظر */
+function showScreen(screenId) {
+    screens.forEach(screen => {
+        screen.classList.remove('active');
+    });
+    $(screenId).classList.add('active');
+}
+
+/** بارگذاری بانک سوالات از فایل JSON */
+async function loadQuestions() {
+    try {
+        const response = await fetch('questions.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        allQuestions = await response.json();
+        console.log(`بانک سوالات با موفقیت بارگذاری شد. تعداد: ${allQuestions.length}`);
+    } catch (error) {
+        console.error("خطا در بارگذاری بانک سوالات:", error);
+        alert("خطا در بارگذاری بانک سوالات. لطفاً از اتصال اینترنت خود مطمئن شوید.");
+    }
+}
+
+/** رندوم‌سازی سوالات و شروع آزمون */
+function startExam() {
+    if (allQuestions.length === 0) {
+        alert("بانک سوالات هنوز بارگذاری نشده است.");
+        return;
+    }
+
+    const count = parseInt($('#question-count').value);
+    const duration = parseInt($('#exam-duration').value);
+
+    if (count <= 0 || duration <= 0) {
+        alert("تعداد سوالات و زمان آزمون باید مثبت باشد.");
+        return;
+    }
+
+    // انتخاب رندوم سوالات
+    const shuffledQuestions = [...allQuestions].sort(() => 0.5 - Math.random());
+    examQuestions = shuffledQuestions.slice(0, Math.min(count, allQuestions.length));
+    
+    userAnswers = {};
+    currentQuestionIndex = 0;
+    totalTimeSeconds = duration * 60;
+    timeRemaining = totalTimeSeconds;
+
+    // مقداردهی اولیه پاسخ‌ها به null (بدون پاسخ)
+    examQuestions.forEach(q => {
+        userAnswers[q.id] = null;
+    });
+
+    showScreen('#exam-screen');
+    startTimer();
+    displayQuestion(currentQuestionIndex);
+}
+
+// ------------------- Timer Management -------------------
+
+function startTimer() {
+    clearInterval(timerInterval);
+    const timerDisplay = $('#timer-display');
+
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+
+        if (timeRemaining < 0) {
+            timeRemaining = 0;
+            clearInterval(timerInterval);
+            finishExam(true); // پایان خودکار
+            return;
+        }
+
+        const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, '0');
+        const seconds = String(timeRemaining % 60).padStart(2, '0');
+        timerDisplay.textContent = `${minutes}:${seconds}`;
+
+        // هشدار زمان باقی‌مانده (مثلا ۵ دقیقه)
+        if (timeRemaining === 300) {
+            timerDisplay.style.color = 'red';
+            // می‌توان اینجا یک هشدار صوتی/لرزشی اضافه کرد.
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+}
+
+// ------------------- Exam Screen Management -------------------
+
+/** نمایش سوال فعلی */
+function displayQuestion(index) {
+    currentQuestionIndex = index;
+    const question = examQuestions[index];
+    
+    if (!question) return;
+
+    // ذخیره آخرین سوال مشاهده شده برای مودال
+    lastViewedQuestionIndex = index;
+
+    $('#question-text').textContent = `${index + 1}. ${question.questionText}`;
+    optionsContainer.innerHTML = '';
+
+    const options = [
+        { key: 'A', text: question.optionA },
+        { key: 'B', text: question.optionB },
+        { key: 'C', text: question.optionC },
+        { key: 'D', text: question.optionD }
+    ];
+
+    options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.dir = 'ltr';
+        btn.textContent = `${option.key}: ${option.text}`;
+        btn.dataset.answer = option.key;
+
+        // اگر کاربر قبلاً پاسخ داده، دکمه را فعال نشان بده
+        if (userAnswers[question.id] === option.key) {
+            btn.classList.add('selected');
+        }
+
+        btn.addEventListener('click', () => selectAnswer(question.id, option.key));
+        optionsContainer.appendChild(btn);
+    });
+
+    updateNavigationButtons();
+}
+
+/** انتخاب پاسخ و رفتن به سوال بعد */
+function selectAnswer(questionId, answer) {
+    // حذف کلاس selected از همه گزینه‌ها
+    $$('.option-btn').forEach(btn => btn.classList.remove('selected'));
+    
+    // فعال کردن گزینه انتخاب شده
+    $(`.option-btn[data-answer="${answer}"]`).classList.add('selected');
+
+    userAnswers[questionId] = answer;
+    
+    // رفتن خودکار به سوال بعد
+    setTimeout(() => {
+        if (currentQuestionIndex < examQuestions.length - 1) {
+            displayQuestion(currentQuestionIndex + 1);
+        } else {
+            // اگر سوال آخر است، دکمه پایان را فعال کن
+            finishExamBtn.focus();
+        }
+        updateAnswerSheetModal();
+    }, 300); // تاخیر کوتاه برای مشاهده انتخاب
+}
+
+/** به‌روزرسانی وضعیت دکمه‌های ناوبری */
+function updateNavigationButtons() {
+    prevQuestionBtn.disabled = currentQuestionIndex === 0;
+    nextQuestionBtn.disabled = currentQuestionIndex === examQuestions.length - 1;
+}
+
+/** مدیریت دکمه‌های ناوبری */
+prevQuestionBtn.addEventListener('click', () => {
+    if (currentQuestionIndex > 0) {
+        displayQuestion(currentQuestionIndex - 1);
+    }
+});
+
+nextQuestionBtn.addEventListener('click', () => {
+    if (currentQuestionIndex < examQuestions.length - 1) {
+        displayQuestion(currentQuestionIndex + 1);
+    }
+});
+
+/** نمایش مودال پاسخبرگ */
+answerSheetBtn.addEventListener('click', () => {
+    answerSheetModal.style.display = 'flex';
+    updateAnswerSheetModal();
+});
+
+/** به‌روزرسانی محتوای مودال پاسخبرگ */
+function updateAnswerSheetModal() {
+    const modalContainer = $('#modal-controls-container');
+    modalContainer.innerHTML = '';
+
+    examQuestions.forEach((q, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'modal-jump-btn';
+        btn.textContent = index + 1;
+        btn.addEventListener('click', () => jumpToQuestion(index));
+
+        // رنگ‌دهی: آبی کمرنگ برای جواب داده شده
+        if (userAnswers[q.id] !== null) {
+            btn.classList.add('answered');
+        }
+        
+        modalContainer.appendChild(btn);
+    });
+}
+
+/** پرش به سوال از طریق مودال */
+function jumpToQuestion(index) {
+    displayQuestion(index);
+    answerSheetModal.style.display = 'none';
+}
+
+/** بستن مودال و برگشت به آخرین سوال */
+closeModalBtn.addEventListener('click', () => {
+    answerSheetModal.style.display = 'none';
+    displayQuestion(lastViewedQuestionIndex);
+});
+
+
+// ------------------- Exam Finish -------------------
+
+/** پایان دادن به آزمون */
+finishExamBtn.addEventListener('click', () => {
+    const confirmation = confirm("آیا مطمئن هستید که می‌خواهید آزمون را پایان دهید؟");
+    if (confirmation) {
+        finishExam(false);
+    }
+});
+
+/** منطق پایان آزمون */
+function finishExam(isAuto = false) {
+    stopTimer();
+    
+    if (isAuto) {
+        alert("زمان آزمون به پایان رسید. آزمون خاتمه یافت.");
+    }
+    
+    // محاسبه نتایج
+    let correctCount = 0;
+    let wrongCount = 0;
+    let unansweredCount = 0;
+    const totalQuestions = examQuestions.length;
+    const timeSpent = totalTimeSeconds - timeRemaining;
+
+    examQuestions.forEach(q => {
+        const userAnswer = userAnswers[q.id];
+        if (userAnswer === null) {
+            unansweredCount++;
+        } else if (userAnswer === q.correctAnswer) {
+            correctCount++;
+        } else {
+            wrongCount++;
+        }
+    });
+
+    const scorePercentage = ((correctCount / totalQuestions) * 100).toFixed(2);
+    
+    // نمایش کارنامه
+    displayResults({
+        totalQuestions,
+        correctCount,
+        wrongCount,
+        unansweredCount,
+        scorePercentage,
+        timeSpent
+    });
+}
+
+// ------------------- Result Screen Management -------------------
+
+/** نمایش صفحه کارنامه */
+function displayResults(results) {
+    showScreen('#result-screen');
+
+    // ۱. نمایش خلاصه نتایج
+    $('#total-questions-result').textContent = results.totalQuestions;
+    $('#correct-answers-result').textContent = results.correctCount;
+    $('#wrong-answers-result').textContent = results.wrongCount;
+    $('#unanswered-result').textContent = results.unansweredCount;
+    $('#score-percentage-result').textContent = `% ${results.scorePercentage}`;
+    
+    const minutes = String(Math.floor(results.timeSpent / 60)).padStart(2, '0');
+    const seconds = String(results.timeSpent % 60).padStart(2, '0');
+    $('#time-spent-result').textContent = `${minutes}:${seconds}`;
+
+    // ۲. نمایش دکمه‌های پرش (کلید سوالات)
+    const resultControlsContainer = $('#result-controls-container');
+    resultControlsContainer.innerHTML = '';
+    
+    examQuestions.forEach((q, index) => {
+        const userAnswer = userAnswers[q.id];
+        const btn = document.createElement('button');
+        btn.className = 'result-jump-btn';
+        btn.textContent = index + 1;
+        btn.dataset.questionIndex = index;
+        
+        let statusClass = 'unanswered';
+        if (userAnswer !== null) {
+            statusClass = (userAnswer === q.correctAnswer) ? 'correct' : 'wrong';
+        }
+        btn.classList.add(statusClass);
+        
+        btn.addEventListener('click', () => {
+            const explanationCard = $(`#explanation-q-${index}`);
+            if (explanationCard) {
+                explanationCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        resultControlsContainer.appendChild(btn);
+    });
+
+    // ۳. نمایش پاسخ‌های تشریحی
+    const explanationArea = $('#explanation-area');
+    explanationArea.innerHTML = '';
+
+    examQuestions.forEach((q, index) => {
+        const card = createExplanationCard(q, index);
+        explanationArea.appendChild(card);
+    });
+}
+
+/** ساخت کادر پاسخ تشریحی */
+function createExplanationCard(question, index) {
+    const card = document.createElement('div');
+    card.className = 'glass-card explanation-card';
+    card.id = `explanation-q-${index}`;
+
+    const userAnswer = userAnswers[question.id];
+    
+    // صورت سوال
+    card.innerHTML += `<p class="question-text" dir="ltr">${index + 1}. ${question.questionText}</p>`;
+    
+    // گزینه‌ها
+    const optionsHtml = document.createElement('div');
+    optionsHtml.className = 'options-container';
+    
+    const options = [
+        { key: 'A', text: question.optionA },
+        { key: 'B', text: question.optionB },
+        { key: 'C', text: question.optionC },
+        { key: 'D', text: question.optionD }
+    ];
+
+    options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.dir = 'ltr';
+        btn.textContent = `${option.key}: ${option.text}`;
+        btn.disabled = true; // در کارنامه غیرفعال است
+
+        if (option.key === question.correctAnswer) {
+            btn.classList.add('correct-answer'); // گزینه صحیح (سبز)
+        } else if (option.key === userAnswer && option.key !== question.correctAnswer) {
+            btn.classList.add('user-wrong-answer'); // پاسخ غلط کاربر (قرمز)
+        }
+        optionsHtml.appendChild(btn);
+    });
+    
+    card.appendChild(optionsHtml);
+
+    // پاسخ تشریحی (RTL/فارسی)
+    card.innerHTML += `<p class="explanation-text">${question.explanation}</p>`;
+    
+    // دکمه بازگشت به بالا
+    const backToTopBtn = document.createElement('button');
+    backToTopBtn.className = 'back-to-top-btn control-btn';
+    backToTopBtn.textContent = 'بازگشت به بالا';
+    backToTopBtn.addEventListener('click', () => {
+        resultScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    card.appendChild(backToTopBtn);
+
+    return card;
+}
+
+// ------------------- Event Listeners -------------------
+
+startExamBtn.addEventListener('click', startExam);
+retakeExamBtn.addEventListener('click', () => showScreen('#home-screen'));
+
+// ------------------- Initialization -------------------
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadQuestions();
+    showScreen('#home-screen');
+});

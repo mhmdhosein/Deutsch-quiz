@@ -1,0 +1,340 @@
+/* تنظیم فونت وزیرمتن */
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('Vazirmatn.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+:root {
+    /* رنگ‌های اصلی */
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --warning-color: #dc3545;
+    --success-color: #28a745;
+    --unanswered-color: #6c757d; /* خاکستری برای نزده‌ها */
+    --correct-color: #28a745; /* سبز برای درست */
+    --wrong-color: #dc3545; /* قرمز برای غلط */
+    --active-answer-color: #89cff0; /* آبی کمرنگ برای پاسخ داده شده */
+
+    /* تنظیمات Glassmorphism */
+    --glass-bg-color: rgba(255, 255, 255, 0.2);
+    --glass-border-color: rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    --glass-backdrop-blur: 10px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Vazirmatn', sans-serif;
+    /* تنظیم برای انتقال به سوال بعد */
+    transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
+}
+
+body {
+    background: linear-gradient(135deg, #a8dadc, #457b9d); /* پس زمینه زیبا */
+    color: #f1faee;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+#app-container {
+    width: 100%;
+    max-width: 500px; /* حداکثر عرض برای تجربه موبایلی خوب */
+}
+
+/* ------------------- Glassmorphism Card ------------------- */
+.glass-card {
+    background: var(--glass-bg-color);
+    border-radius: 20px;
+    border: 1px solid var(--glass-border-color);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(var(--glass-backdrop-blur));
+    -webkit-backdrop-filter: blur(var(--glass-backdrop-blur));
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.header-card {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.content-card {
+    min-height: 200px;
+}
+
+.footer-card {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+}
+
+/* ------------------- Screen Management ------------------- */
+.screen {
+    display: none;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.screen.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------- Typography and Layout ------------------- */
+h2, h3, h4 {
+    margin-bottom: 15px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.question-text {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #f1faee;
+    line-height: 1.6;
+}
+
+/* ------------------- Form Elements ------------------- */
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--glass-border-color);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1faee;
+    font-size: 1rem;
+    -webkit-appearance: none; /* برای آیفون */
+}
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* ------------------- Buttons (Control and Main) ------------------- */
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 5px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.main-btn {
+    background-color: var(--primary-color);
+    color: white;
+    width: 100%;
+    font-size: 1.1rem;
+    margin-top: 15px;
+}
+
+.main-btn:active {
+    transform: scale(0.98);
+}
+
+.control-btn {
+    background-color: var(--secondary-color);
+    color: white;
+    flex-grow: 1;
+    min-width: 80px;
+}
+
+.control-btn.secondary-btn {
+    background-color: #1d3557;
+}
+
+.control-btn.warning-btn {
+    background-color: var(--warning-color);
+}
+
+.control-btn:disabled {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #a9a9a9;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* ------------------- Options (Question Buttons) ------------------- */
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-btn {
+    text-align: left; /* LTR */
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1faee;
+    padding: 15px;
+    font-size: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    width: 100%;
+    box-shadow: none;
+}
+
+.option-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* وضعیت پاسخ داده شده (آبی کمرنگ) */
+.option-btn.selected {
+    border-color: var(--active-answer-color);
+    background-color: var(--active-answer-color);
+    color: #1d3557;
+    font-weight: bold;
+}
+
+
+/* ------------------- Result Screen Styles ------------------- */
+#timer-display {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ffc107; /* رنگ طلایی برای زمان */
+}
+
+.summary-card p {
+    margin-bottom: 5px;
+    direction: rtl;
+    text-align: right;
+}
+
+.result-controls-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0;
+}
+
+.result-jump-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 0.9rem;
+    border-radius: 50%; /* دایره‌ای */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s;
+}
+.result-jump-btn:active {
+    transform: scale(0.9);
+}
+
+/* رنگ‌دهی دکمه‌های کارنامه */
+.result-jump-btn.correct { background-color: var(--correct-color); }
+.result-jump-btn.wrong { background-color: var(--wrong-color); }
+.result-jump-btn.unanswered { background-color: var(--unanswered-color); }
+
+/* ------------------- Explanation Section ------------------- */
+.explanation-card {
+    margin-bottom: 30px;
+    padding: 25px;
+    /* ظاهر شیشه‌ای برای کادر پاسخ تشریحی */
+}
+
+.explanation-card .question-text {
+    color: #fff;
+}
+
+.explanation-card .option-btn {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* نمایش پاسخ تشریحی */
+.explanation-text {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.5);
+    direction: rtl; /* متن فارسی */
+    text-align: right;
+    line-height: 1.8;
+    color: #f1faee;
+}
+
+/* رنگ‌دهی گزینه‌ها در کارنامه */
+.explanation-card .option-btn.correct-answer {
+    background-color: var(--correct-color);
+    border-color: var(--correct-color);
+    color: white;
+}
+.explanation-card .option-btn.user-wrong-answer {
+    background-color: var(--wrong-color);
+    border-color: var(--wrong-color);
+    color: white;
+}
+
+/* دکمه بازگشت به بالا */
+.back-to-top-btn {
+    width: 100%;
+    margin-top: 15px;
+    background-color: var(--secondary-color);
+}
+
+/* ------------------- Modal (Answer Sheet) ------------------- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* تار شدن پس‌زمینه */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    text-align: center;
+    /* Glassmorphism اعمال شده است */
+}
+
+.modal-controls-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 300px; /* برای اسکرول عمودی */
+    overflow-y: auto;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-jump-btn {
+    width: 35px;
+    height: 35px;
+    padding: 0;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    background-color: var(--unanswered-color); /* خاکستری پیش‌فرض */
+}
+.modal-jump-btn.answered {
+    background-color: var(--active-answer-color); /* آبی کمرنگ */
+}
