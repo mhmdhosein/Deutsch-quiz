@@ -46,6 +46,7 @@ function loadQuestions() {
             // تنظیم حداکثر سوالات در صفحه اصلی بر اساس تعداد واقعی
             const questionCountInput = $('#question-count');
             questionCountInput.setAttribute('max', allQuestions.length);
+            // اگر کاربر عددی بزرگتر از تعداد کل سوالات وارد کرده، آن را اصلاح کن
             if (parseInt(questionCountInput.value) > allQuestions.length) {
                  questionCountInput.value = Math.min(40, allQuestions.length);
             }
@@ -319,10 +320,9 @@ function displayResults(results) {
         btn.addEventListener('click', () => {
             const explanationCard = $(`#explanation-q-${index}`);
             if (explanationCard) {
-                // اسکرول به بالا با یک آفست کوچک
                 const offset = -70;
                 const elementPosition = explanationCard.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffsets + offset;
+                const offsetPosition = elementPosition + window.pageYOffset + offset;
 
                 window.scrollTo({
                     top: offsetPosition,
@@ -371,7 +371,7 @@ function createExplanationCard(question, index) {
         btn.className = 'option-btn';
         btn.dir = 'ltr';
         btn.textContent = `${option.key}: ${option.text}`;
-        btn.disabled = true; // در کارنامه غیرفعال است
+        btn.disabled = true;
 
         if (option.key === question.correctAnswer) {
             btn.classList.add('correct-answer'); // گزینه صحیح (سبز)
@@ -391,7 +391,6 @@ function createExplanationCard(question, index) {
     backToTopBtn.className = 'back-to-top-btn control-btn';
     backToTopBtn.textContent = 'بازگشت به بالا';
     backToTopBtn.addEventListener('click', () => {
-        // اسکرول به بالای صفحه (بخش Summary و دکمه‌های پرش)
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     card.appendChild(backToTopBtn);
