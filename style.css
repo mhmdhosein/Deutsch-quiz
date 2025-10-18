@@ -102,7 +102,7 @@ h2, h3, h4 {
     font-size: 1.2rem;
     font-weight: bold;
     margin-bottom: 20px;
-    color: #f1faee;
+    color: #000; /* **تغییر: مشکی شدن صورت سوال در آزمون** */
     line-height: 1.6;
 }
 
@@ -115,6 +115,7 @@ label {
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
+    color: #000; /* **تغییر: مشکی شدن نوشته‌های تنظیمات** */
 }
 
 input[type="number"] {
@@ -123,13 +124,18 @@ input[type="number"] {
     border: 1px solid var(--glass-border-color);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.1);
-    color: #f1faee;
+    color: #000; /* **تغییر: مشکی شدن عدد درون کادر** */
     font-size: 1rem;
     -webkit-appearance: none; /* برای آیفون */
 }
 input[type="number"]:focus {
     outline: none;
     border-color: var(--primary-color);
+}
+
+/* **اضافه: مشکی شدن نوشته توجه در صفحه خانه** */
+#home-screen p {
+    color: #000;
 }
 
 /* ------------------- Buttons (Control and Main) ------------------- */
@@ -188,7 +194,7 @@ button {
 .option-btn {
     text-align: left; /* LTR */
     background: rgba(255, 255, 255, 0.1);
-    color: #f1faee;
+    color: #000; /* **تغییر: مشکی شدن نوشته گزینه‌ها در آزمون** */
     padding: 15px;
     font-size: 1rem;
     border: 2px solid rgba(255, 255, 255, 0.4);
@@ -213,13 +219,14 @@ button {
 #timer-display {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #171BAF; /* رنگ طلایی برای زمان */
+    color: var(--primary-color); /* **تغییر: آبی شدن زمان‌شمار معکوس** */
 }
 
 .summary-card p {
     margin-bottom: 5px;
     direction: rtl;
     text-align: right;
+    color: #000; /* **اضافه: مشکی شدن نوشته‌های کارنامه در کادر اول** */
 }
 
 .result-controls-container {
@@ -237,6 +244,7 @@ button {
     border-radius: 50%; /* دایره‌ای */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.1s;
+    color: white; /* **تغییر: سفید شدن شماره سوال روی دکمه‌های کارنامه** */
 }
 .result-jump-btn:active {
     transform: scale(0.9);
@@ -255,12 +263,13 @@ button {
 }
 
 .explanation-card .question-text {
-    color: #fff;
+    color: #000; /* **تغییر: مشکی شدن صورت سوال در پاسخ تشریحی** */
 }
 
 .explanation-card .option-btn {
     border: 2px solid rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.05);
+    color: #000; /* **اضافه: مشکی شدن نوشته گزینه‌های عادی در پاسخ تشریحی** */
 }
 
 /* نمایش پاسخ تشریحی */
@@ -271,10 +280,10 @@ button {
     direction: rtl; /* متن فارسی */
     text-align: right;
     line-height: 1.8;
-    color: #f1faee;
+    color: #000; /* **تغییر: مشکی شدن متن پاسخ تشریحی** */
 }
 
-/* رنگ‌دهی گزینه‌ها در کارنامه */
+/* رنگ‌دهی گزینه‌ها در کارنامه (تغییری ندارند و نوشته سفید باقی می‌ماند) */
 .explanation-card .option-btn.correct-answer {
     background-color: var(--correct-color);
     border-color: var(--correct-color);
