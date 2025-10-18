@@ -1,12 +1,12 @@
 // متغیرهای عمومی
-let allQuestions = []; // کل بانک سوالات
-let examQuestions = []; // سوالات انتخاب شده برای آزمون
-let userAnswers = {}; // پاسخ‌های کاربر {questionId: 'A' | 'B' | 'C' | 'D' | null}
+let allQuestions = [];
+let examQuestions = [];
+let userAnswers = {};
 let currentQuestionIndex = 0;
 let totalTimeSeconds = 0;
 let timeRemaining = 0;
 let timerInterval = null;
-let lastViewedQuestionIndex = 0; // برای بازگشت از مودال
+let lastViewedQuestionIndex = 0;
 
 // انتخاب‌گرهای DOM
 const $ = selector => document.querySelector(selector);
@@ -14,9 +14,6 @@ const $$ = selector => document.querySelectorAll(selector);
 
 // المان‌های صفحه
 const screens = $$('.screen');
-const homeScreen = $('#home-screen');
-const examScreen = $('#exam-screen');
-const resultScreen = $('#result-screen');
 const startExamBtn = $('#start-exam-btn');
 const finishExamBtn = $('#finish-exam-btn');
 const retakeExamBtn = $('#retake-exam-btn');
@@ -35,20 +32,29 @@ function showScreen(screenId) {
         screen.classList.remove('active');
     });
     $(screenId).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/** بارگذاری بانک سوالات از فایل JSON */
-async function loadQuestions() {
+/** بارگذاری بانک سوالات از متغیر سراسری در index.html (رفع خطای بارگذاری) */
+function loadQuestions() {
     try {
-        const response = await fetch('questions.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // خواندن داده‌ها از متغیری که در index.html تعریف شده است
+        if (window.QUESTIONS_DATA && Array.isArray(window.QUESTIONS_DATA) && window.QUESTIONS_DATA.length > 0) {
+            allQuestions = window.QUESTIONS_DATA;
+            console.log(`بانک سوالات با موفقیت از index.html بارگذاری شد. تعداد: ${allQuestions.length}`);
+            
+            // تنظیم حداکثر سوالات در صفحه اصلی بر اساس تعداد واقعی
+            const questionCountInput = $('#question-count');
+            questionCountInput.setAttribute('max', allQuestions.length);
+            if (parseInt(questionCountInput.value) > allQuestions.length) {
+                 questionCountInput.value = Math.min(40, allQuestions.length);
+            }
+        } else {
+            throw new Error("متغیر QUESTIONS_DATA در index.html تعریف نشده، خالی یا نامعتبر است.");
         }
-        allQuestions = await response.json();
-        console.log(`بانک سوالات با موفقیت بارگذاری شد. تعداد: ${allQuestions.length}`);
     } catch (error) {
         console.error("خطا در بارگذاری بانک سوالات:", error);
-        alert("خطا در بارگذاری بانک سوالات. لطفاً از اتصال اینترنت خود مطمئن شوید.");
+        alert("خطا در بارگذاری بانک سوالات. لطفاً محتوای questions.json را در index.html بررسی کنید.");
     }
 }
 
@@ -59,24 +65,25 @@ function startExam() {
         return;
     }
 
-    const count = parseInt($('#question-count').value);
+    const requestedCount = parseInt($('#question-count').value);
+    const count = Math.min(requestedCount, allQuestions.length);
     const duration = parseInt($('#exam-duration').value);
 
     if (count <= 0 || duration <= 0) {
-        alert("تعداد سوالات و زمان آزمون باید مثبت باشد.");
+        alert("تعداد سوالات و زمان آزمون باید مثبت و منطقی باشد.");
         return;
     }
 
     // انتخاب رندوم سوالات
     const shuffledQuestions = [...allQuestions].sort(() => 0.5 - Math.random());
-    examQuestions = shuffledQuestions.slice(0, Math.min(count, allQuestions.length));
+    examQuestions = shuffledQuestions.slice(0, count);
     
     userAnswers = {};
     currentQuestionIndex = 0;
     totalTimeSeconds = duration * 60;
     timeRemaining = totalTimeSeconds;
 
-    // مقداردهی اولیه پاسخ‌ها به null (بدون پاسخ)
+    // مقداردهی اولیه پاسخ‌ها
     examQuestions.forEach(q => {
         userAnswers[q.id] = null;
     });
@@ -91,6 +98,7 @@ function startExam() {
 function startTimer() {
     clearInterval(timerInterval);
     const timerDisplay = $('#timer-display');
+    timerDisplay.style.color = '#ffc107';
 
     timerInterval = setInterval(() => {
         timeRemaining--;
@@ -98,7 +106,7 @@ function startTimer() {
         if (timeRemaining < 0) {
             timeRemaining = 0;
             clearInterval(timerInterval);
-            finishExam(true); // پایان خودکار
+            finishExam(true); // پایان خودکار با اتمام زمان
             return;
         }
 
@@ -106,10 +114,8 @@ function startTimer() {
         const seconds = String(timeRemaining % 60).padStart(2, '0');
         timerDisplay.textContent = `${minutes}:${seconds}`;
 
-        // هشدار زمان باقی‌مانده (مثلا ۵ دقیقه)
-        if (timeRemaining === 300) {
+        if (timeRemaining <= 300 && timeRemaining > 0) {
             timerDisplay.style.color = 'red';
-            // می‌توان اینجا یک هشدار صوتی/لرزشی اضافه کرد.
         }
     }, 1000);
 }
@@ -122,14 +128,14 @@ function stopTimer() {
 
 /** نمایش سوال فعلی */
 function displayQuestion(index) {
+    if (index < 0 || index >= examQuestions.length) return;
+
     currentQuestionIndex = index;
     const question = examQuestions[index];
     
-    if (!question) return;
-
-    // ذخیره آخرین سوال مشاهده شده برای مودال
     lastViewedQuestionIndex = index;
-
+    
+    // نمایش سوال (LTR)
     $('#question-text').textContent = `${index + 1}. ${question.questionText}`;
     optionsContainer.innerHTML = '';
 
@@ -147,7 +153,6 @@ function displayQuestion(index) {
         btn.textContent = `${option.key}: ${option.text}`;
         btn.dataset.answer = option.key;
 
-        // اگر کاربر قبلاً پاسخ داده، دکمه را فعال نشان بده
         if (userAnswers[question.id] === option.key) {
             btn.classList.add('selected');
         }
@@ -159,26 +164,23 @@ function displayQuestion(index) {
     updateNavigationButtons();
 }
 
-/** انتخاب پاسخ و رفتن به سوال بعد */
+/** انتخاب پاسخ و رفتن به سوال بعد (خودکار) */
 function selectAnswer(questionId, answer) {
-    // حذف کلاس selected از همه گزینه‌ها
     $$('.option-btn').forEach(btn => btn.classList.remove('selected'));
     
-    // فعال کردن گزینه انتخاب شده
     $(`.option-btn[data-answer="${answer}"]`).classList.add('selected');
 
     userAnswers[questionId] = answer;
     
-    // رفتن خودکار به سوال بعد
+    // رفتن خودکار به سوال بعد (با تأخیر کوتاه)
     setTimeout(() => {
         if (currentQuestionIndex < examQuestions.length - 1) {
             displayQuestion(currentQuestionIndex + 1);
         } else {
-            // اگر سوال آخر است، دکمه پایان را فعال کن
             finishExamBtn.focus();
         }
-        updateAnswerSheetModal();
-    }, 300); // تاخیر کوتاه برای مشاهده انتخاب
+    }, 300);
+    updateAnswerSheetModal();
 }
 
 /** به‌روزرسانی وضعیت دکمه‌های ناوبری */
@@ -188,17 +190,9 @@ function updateNavigationButtons() {
 }
 
 /** مدیریت دکمه‌های ناوبری */
-prevQuestionBtn.addEventListener('click', () => {
-    if (currentQuestionIndex > 0) {
-        displayQuestion(currentQuestionIndex - 1);
-    }
-});
+prevQuestionBtn.addEventListener('click', () => displayQuestion(currentQuestionIndex - 1));
+nextQuestionBtn.addEventListener('click', () => displayQuestion(currentQuestionIndex + 1));
 
-nextQuestionBtn.addEventListener('click', () => {
-    if (currentQuestionIndex < examQuestions.length - 1) {
-        displayQuestion(currentQuestionIndex + 1);
-    }
-});
 
 /** نمایش مودال پاسخبرگ */
 answerSheetBtn.addEventListener('click', () => {
@@ -232,7 +226,7 @@ function jumpToQuestion(index) {
     answerSheetModal.style.display = 'none';
 }
 
-/** بستن مودال و برگشت به آخرین سوال */
+/** بستن مودال و برگشت به آخرین سوالی که از آن وارد پاسخبرگ شده بودیم */
 closeModalBtn.addEventListener('click', () => {
     answerSheetModal.style.display = 'none';
     displayQuestion(lastViewedQuestionIndex);
@@ -241,7 +235,7 @@ closeModalBtn.addEventListener('click', () => {
 
 // ------------------- Exam Finish -------------------
 
-/** پایان دادن به آزمون */
+/** پایان دادن به آزمون توسط کاربر */
 finishExamBtn.addEventListener('click', () => {
     const confirmation = confirm("آیا مطمئن هستید که می‌خواهید آزمون را پایان دهید؟");
     if (confirmation) {
@@ -314,7 +308,6 @@ function displayResults(results) {
         const btn = document.createElement('button');
         btn.className = 'result-jump-btn';
         btn.textContent = index + 1;
-        btn.dataset.questionIndex = index;
         
         let statusClass = 'unanswered';
         if (userAnswer !== null) {
@@ -322,10 +315,19 @@ function displayResults(results) {
         }
         btn.classList.add(statusClass);
         
+        // اسکرول به پاسخ تشریحی
         btn.addEventListener('click', () => {
             const explanationCard = $(`#explanation-q-${index}`);
             if (explanationCard) {
-                explanationCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // اسکرول به بالا با یک آفست کوچک
+                const offset = -70;
+                const elementPosition = explanationCard.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffsets + offset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
             }
         });
 
@@ -342,7 +344,7 @@ function displayResults(results) {
     });
 }
 
-/** ساخت کادر پاسخ تشریحی */
+/** ساخت کادر پاسخ تشریحی برای نمایش در کارنامه */
 function createExplanationCard(question, index) {
     const card = document.createElement('div');
     card.className = 'glass-card explanation-card';
@@ -350,10 +352,10 @@ function createExplanationCard(question, index) {
 
     const userAnswer = userAnswers[question.id];
     
-    // صورت سوال
+    // صورت سوال (LTR)
     card.innerHTML += `<p class="question-text" dir="ltr">${index + 1}. ${question.questionText}</p>`;
     
-    // گزینه‌ها
+    // گزینه‌ها (LTR)
     const optionsHtml = document.createElement('div');
     optionsHtml.className = 'options-container';
     
@@ -389,7 +391,8 @@ function createExplanationCard(question, index) {
     backToTopBtn.className = 'back-to-top-btn control-btn';
     backToTopBtn.textContent = 'بازگشت به بالا';
     backToTopBtn.addEventListener('click', () => {
-        resultScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // اسکرول به بالای صفحه (بخش Summary و دکمه‌های پرش)
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     card.appendChild(backToTopBtn);
 
